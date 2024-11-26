@@ -47,6 +47,11 @@
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
+    // Variables to control color transition of the background
+    let rbgColor = {r: 0, g: 0, b: 0};
+    let rbgTarget = {r: 255, g: 255, b: 255};
+    let transitionSpeed = 0.02;
+
     // microphone
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
@@ -61,7 +66,16 @@
           
           analyser.getByteFrequencyData(dataArray);
           canvasContext.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas for fresh frame
-          
+
+          // Smoothly transition background color
+          rbgColor.r += (rbgTarget.r - rbgColor.r) * transitionSpeed;
+          rbgColor.g += (rbgTarget.g - rbgColor.g) * transitionSpeed;
+          rbgColor.b += (rbgTarget.b - rbgColor.b) * transitionSpeed;
+
+          // Set background color based on audio frequencies
+          canvasContext.fillStyle = `rgb(${Math.floor(rbgColor.r)}, ${Math.floor(rbgColor.g)}, ${Math.floor(rbgColor.b)})`;
+          canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+
           // Generate spiral path based on the frequency data
           const barWidth = canvas.width / bufferLength;
           let x = 0;
@@ -72,10 +86,10 @@
           for (let i = 0; i < bufferLength; i++) {
             const barHeight = dataArray[i];
 
-            // Map the frequency to color
+            // Map the frequency to color (full RGB range)
             const red = (barHeight + (100 * (i / bufferLength))) % 255;
             const green = (255 - barHeight) % 255;
-            const blue = barHeight % 255;
+            const blue = (barHeight + (i * 20)) % 255;
 
             // Set dynamic color for the spiral stroke
             canvasContext.strokeStyle = `rgb(${red}, ${green}, ${blue})`;
