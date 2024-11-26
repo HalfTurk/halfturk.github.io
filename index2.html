@@ -52,7 +52,7 @@
     let rbgTarget = {r: 255, g: 255, b: 255};
     let transitionSpeed = 0.02;
 
-    // microphone
+    // Microphone input
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
         const microphone = audioContext.createMediaStreamSource(stream);
@@ -60,7 +60,15 @@
         
         let angle = 0; // Keeps track of angle for spiral
         let radius = 0; // The radius expands as we draw
-        
+
+        // Helper function to create dynamic color based on frequency
+        function mapFrequencyToColor(frequency) {
+          const red = Math.floor((frequency / 255) * 255);
+          const green = Math.floor((255 - frequency / 255) * 255);
+          const blue = Math.floor(frequency % 255);
+          return `rgb(${red}, ${green}, ${blue})`;
+        }
+
         function draw() {
           requestAnimationFrame(draw);
           
@@ -72,11 +80,11 @@
           rbgColor.g += (rbgTarget.g - rbgColor.g) * transitionSpeed;
           rbgColor.b += (rbgTarget.b - rbgColor.b) * transitionSpeed;
 
-          // Set background color based on audio frequencies
+          // Set background color based on audio frequencies (pond-like effect)
           canvasContext.fillStyle = `rgb(${Math.floor(rbgColor.r)}, ${Math.floor(rbgColor.g)}, ${Math.floor(rbgColor.b)})`;
           canvasContext.fillRect(0, 0, canvas.width, canvas.height);
 
-          // Generate spiral path based on the frequency data
+          // Generate different visual patterns based on frequency data
           const barWidth = canvas.width / bufferLength;
           let x = 0;
 
@@ -86,28 +94,59 @@
           for (let i = 0; i < bufferLength; i++) {
             const barHeight = dataArray[i];
 
-            // Map the frequency to color (full RGB range)
-            const red = (barHeight + (100 * (i / bufferLength))) % 255;
-            const green = (255 - barHeight) % 255;
-            const blue = (barHeight + (i * 20)) % 255;
+            // Change the background color depending on frequencies
+            if (i < bufferLength / 3) {
+              // High frequencies (like bird chirping)
+              rbgTarget = {r: 255, g: 255 - barHeight, b: 255 - barHeight};  // Bright, high color
+            } else if (i < (2 * bufferLength) / 3) {
+              // Mid frequencies (like mid-range vocal sounds)
+              rbgTarget = {r: barHeight, g: barHeight, b: 255 - barHeight}; // Gentle color shift
+            } else {
+              // Low frequencies (like bass)
+              rbgTarget = {r: barHeight, g: 255 - barHeight, b: barHeight}; // Deep colors for bass
+            }
 
-            // Set dynamic color for the spiral stroke
-            canvasContext.strokeStyle = `rgb(${red}, ${green}, ${blue})`;
-            canvasContext.lineWidth = 2;
+            // Map frequency data to dynamic color
+            const color = mapFrequencyToColor(barHeight);
 
-            // Calculate position on the spiral based on frequency
+            // Draw circles or lines for visual effect
             radius = i * 2 + (barHeight / 4); // Increase radius with bar height and frequency
             angle = angle + (Math.PI / 30); // Slowly increase the angle to make the spiral
 
-            // Convert polar to Cartesian coordinates
-            const xPos = canvas.width / 2 + Math.cos(angle) * radius;
-            const yPos = canvas.height / 2 + Math.sin(angle) * radius;
+            // Use high frequencies to draw small circles for bird chirps
+            if (i < bufferLength / 3) {
+              canvasContext.beginPath();
+              const xPos = canvas.width / 2 + Math.cos(angle) * radius;
+              const yPos = canvas.height / 2 + Math.sin(angle) * radius;
+              canvasContext.arc(xPos, yPos, 5, 0, Math.PI * 2);
+              canvasContext.fillStyle = color;
+              canvasContext.fill();
+            }
 
-            // Draw the spiral path
-            canvasContext.beginPath();
-            canvasContext.moveTo(xPos, yPos);
-            canvasContext.lineTo(xPos + Math.cos(angle + Math.PI / 2) * 5, yPos + Math.sin(angle + Math.PI / 2) * 5);
-            canvasContext.stroke();
+            // Use mid frequencies to draw dynamic lines (wave-like motion)
+            if (i >= bufferLength / 3 && i < (2 * bufferLength) / 3) {
+              const xPos = canvas.width / 2 + Math.cos(angle) * radius;
+              const yPos = canvas.height / 2 + Math.sin(angle) * radius;
+              canvasContext.beginPath();
+              canvasContext.moveTo(xPos, yPos);
+              canvasContext.lineTo(xPos + Math.cos(angle + Math.PI / 2) * 10, yPos + Math.sin(angle + Math.PI / 2) * 10);
+              canvasContext.strokeStyle = color;
+              canvasContext.lineWidth = 2;
+              canvasContext.stroke();
+            }
+
+            // Use low frequencies to create large, slower-moving circles for bass
+            if (i >= (2 * bufferLength) / 3) {
+              const xPos = canvas.width / 2 + Math.cos(angle) * radius;
+              const yPos = canvas.height / 2 + Math.sin(angle) * radius;
+              canvasContext.beginPath();
+              canvasContext.arc(xPos, yPos, barHeight / 5, 0, Math.PI * 2);
+              canvasContext.strokeStyle = color;
+              canvasContext.lineWidth = 2;
+              canvasContext.stroke();
+            }
+
+            x += barWidth; // Increment x for next bar
           }
 
           // Slightly adjust globalAlpha to make blending more fluid over time
