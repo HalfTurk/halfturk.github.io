@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Audio to Visuals</title>
+  <title>I Hate Modern Art.</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -33,60 +33,54 @@
 <body>
   <h1>Real-Time Audio Visualization</h1>
   <div class="controls">
-    <p class="info">Allow microphone access to visualize audio in real time.</p>
+    <p class="info">Mic access</p>
   </div>
   <canvas id="visualizer" width="800" height="400"></canvas>
 
   <script>
-    // Set up the Web Audio API context and canvas
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const canvas = document.getElementById('visualizer');
     const canvasContext = canvas.getContext('2d');
     
-    // Create analyser node
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;  // Define size of FFT (Fast Fourier Transform)
-    const bufferLength = analyser.frequencyBinCount;  // Get number of frequency bins
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
-    // Access the microphone
+    // microphone
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
         const microphone = audioContext.createMediaStreamSource(stream);
-        microphone.connect(analyser);  // Connect microphone input to analyser
+        microphone.connect(analyser);
         
-        // Function to draw the frequency spectrum
         function draw() {
-          requestAnimationFrame(draw);  // Keep calling the draw function
+          requestAnimationFrame(draw);
           
-          analyser.getByteFrequencyData(dataArray);  // Get frequency data
-          canvasContext.clearRect(0, 0, canvas.width, canvas.height);  // Clear previous frame
+          analyser.getByteFrequencyData(dataArray);
+          canvasContext.clearRect(0, 0, canvas.width, canvas.height);
 
-          const barWidth = canvas.width / bufferLength;  // Bar width based on number of bins
+          const barWidth = canvas.width / bufferLength;
           let x = 0;
 
           for (let i = 0; i < bufferLength; i++) {
             const barHeight = dataArray[i];
             
-            // Color mapping: Different frequencies have different colors
             const red = barHeight + (100 * (i / bufferLength));
             const green = 255 - barHeight;
             const blue = barHeight;
-
-            // Set color for this frequency bin (RGB color)
+            
             canvasContext.fillStyle = `rgb(${red}, ${green}, ${blue})`;
 
-            // Draw the bar for this frequency bin
             canvasContext.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
 
-            x += barWidth;  // Move x-position for next bar
+            x += barWidth
           }
         }
 
-        draw();  // Start drawing
+        draw();
       })
       .catch(err => {
-        console.error('Error accessing the microphone: ', err);
+        console.error('Error microphone: ', err);
       });
   </script>
 </body>
