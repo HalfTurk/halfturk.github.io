@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>I Hate Modern Art.</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #111;
+      color: white;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    canvas {
+      border: 1px solid #fff;
+      display: block;
+      margin: 20px auto;
+      background-color: #222;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    .info {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>i hate modern artwork</h1>
+  <div class="controls">
+    <p class="info">Mic access</p>
+  </div>
+  <canvas id="visualizer" width="800" height="400"></canvas>
+
+  <script>
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const canvas = document.getElementById('visualizer');
+    const canvasContext = canvas.getContext('2d');
+    
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    // microphone
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        const microphone = audioContext.createMediaStreamSource(stream);
+        microphone.connect(analyser);
+        
+        let angle = 0; // Keeps track of angle for spiral
+        let radius = 0; // The radius expands as we draw
+        
+        function draw() {
+          requestAnimationFrame(draw);
+          
+          analyser.getByteFrequencyData(dataArray);
+          canvasContext.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas for fresh frame
+          
+          // Generate spiral path based on the frequency data
+          const barWidth = canvas.width / bufferLength;
+          let x = 0;
+
+          // Set some transparency to create blending effects
+          canvasContext.globalAlpha = 0.6; // Adjust transparency for blending
+
+          for (let i = 0; i < bufferLength; i++) {
+            const barHeight = dataArray[i];
+
+            // Map the frequency to color
+            const red = (barHeight + (100 * (i / bufferLength))) % 255;
+            const green = (255 - barHeight) % 255;
+            const blue = barHeight % 255;
+
+            // Set dynamic color for the spiral stroke
+            canvasContext.strokeStyle = `rgb(${red}, ${green}, ${blue})`;
+            canvasContext.lineWidth = 2;
+
+            // Calculate position on the spiral based on frequency
+            radius = i * 2 + (barHeight / 4); // Increase radius with bar height and frequency
+            angle = angle + (Math.PI / 30); // Slowly increase the angle to make the spiral
+
+            // Convert polar to Cartesian coordinates
+            const xPos = canvas.width / 2 + Math.cos(angle) * radius;
+            const yPos = canvas.height / 2 + Math.sin(angle) * radius;
+
+            // Draw the spiral path
+            canvasContext.beginPath();
+            canvasContext.moveTo(xPos, yPos);
+            canvasContext.lineTo(xPos + Math.cos(angle + Math.PI / 2) * 5, yPos + Math.sin(angle + Math.PI / 2) * 5);
+            canvasContext.stroke();
+          }
+
+          // Slightly adjust globalAlpha to make blending more fluid over time
+          canvasContext.globalAlpha = 0.4; // Adjust this value for more or less fading
+        }
+
+        draw();
+      })
+      .catch(err => {
+        console.error('Error microphone: ', err);
+      });
+  </script>
+</body>
+</html>
